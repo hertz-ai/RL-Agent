@@ -2,16 +2,10 @@ import networkx as nx
 import random
 from rich.console import Console
 from rich.table import Table
-import importlib.util
 from create_kg import KG
 
 
-# spec = importlib.util.spec_from_file_location(
-#     "KG", r"D:\Mimisbrunnr\Github Repositories\RL-Agent\create_kg.py")
-# foo = importlib.util.module_from_spec(spec)
-# spec.loader.exec_module(foo)
-# KG = foo.KG
-
+print('here')
 console = Console()
 
 
@@ -42,7 +36,6 @@ for i in range(1):
     threshold = 0.35
     score = random.uniform(0.5, 0.8)
 
-    # adj = nx.adjacency_matrix(G).A
     start = [node for node in G.nodes() if G.in_degree(node) == 0]
     for node in start:
         if random.random() > threshold:
@@ -56,5 +49,5 @@ for i in range(1):
     # l1 = {node: str(ind + 1) + '\n' + str(G.nodes[node]['knowledge score']) + ',' + str(
     #     G.nodes[node]['application score']) for ind, node in enumerate(G.nodes())}
     # nx.draw(G, labels=l1, node_size=4000, node_color='#dddddd', pos=nx.spectral_layout(G))
-    # plt.savefig(r'D:\Mimisbrunnr\Github Repositories\RL-Agent\Trials\op{}.png'.format(i))
+    # plt.savefig('op.png'.format(i))
     # plt.clf()
