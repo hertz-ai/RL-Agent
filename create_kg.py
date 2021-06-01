@@ -1,10 +1,16 @@
 import wikipediaapi
 import networkx as nx
 import networkx.classes.function as nxcf
+import random
+from rich.console import Console
+from rich.table import Table
+import matplotlib.pyplot as plt
 
 
 class KG:
     def __init__(self):
+        self.console = Console()
+
         self.n_nodes = 40
         self.page_name = 'Chemistry'
         self.G = nx.DiGraph()
@@ -37,7 +43,8 @@ class KG:
 
     def pruneGraph(self):
         deg = {node: degree for node, degree in self.G.degree()}
-        self.G.remove_nodes_from([node for node in self.G.nodes() if deg[node] < 2])
+        self.G.remove_nodes_from(
+            [node for node in self.G.nodes() if deg[node] < 2])
 
         to_remove = []
         edge_attrs = {}
@@ -54,9 +61,25 @@ class KG:
         nxcf.set_edge_attributes(self.G, edge_attrs)
         self.G.remove_edges_from(to_remove)
 
+    def __repr__(self):
+        table = Table(title='Nodes and their attributes')
+        table.add_column('No')
+        table.add_column('Name')
+        for name in self.G.nodes(data=True)[list(self.G.nodes())[0]].keys():
+            table.add_column(name)
+        for ind, node in enumerate(self.G.nodes()):
+            table.add_row(str(ind), str(node), *list(map(str, self.G.nodes()[node].values())))
+        with self.console.capture() as capture:
+            self.console.print(table)
+        return capture.get()
+
     def showGraph(self):
-        graph = nx.drawing.nx_pydot.to_pydot(self.G)
-        graph.write_png('{}nodes{}Graph.png'.format(self.n_nodes, self.page_name))
+        nx.draw_networkx(self.G,
+                         pos=nx.spring_layout(self.G),
+                         with_labels=True,
+                         node_color='#E9CF24',
+                         node_size=400)
+        plt.show()
 
     def checkCycles(self):
         cycles = list(nx.algorithms.cycles.simple_cycles(self.G))
@@ -84,8 +107,35 @@ class KG:
                 to_remove_2.append(edge)
         self.G.remove_edges_from(to_remove_2)
         deg = {node: degree for node, degree in self.G.degree()}
-        self.G.remove_nodes_from([node for node in self.G.nodes() if deg[node] == 0])
+        self.G.remove_nodes_from(
+            [node for node in self.G.nodes() if deg[node] == 0])
         print(nxcf.number_of_edges(self.G))
 
+    def initializeScores(self, threshold: float = 0.35, score_low: float = 0.3, score_high: float = 0.8):
+        def step(node):
+            nonlocal threshold, score
+            k = round(score + random.gauss(0, score / 10), 2)
+            a = round(random.uniform(0, k), 2)
+            self.G.nodes[node]['knowledge score'] = max(k, 0)
+            self.G.nodes[node]['application score'] = max(a, 0)
+            threshold += 0.05
+            score -= random.uniform(0.01, min(0.3, score))
+            if score > 0 and threshold < 1:
+                for neighbour in list(nx.neighbors(self.G, node)):
+                    if random.random() > threshold:
+                        step(neighbour)
 
-KG()
+        attrs = {node: {'knowledge score': 0, 'application score': 0}
+                 for node in self.G.nodes()}
+        nx.set_node_attributes(self.G, attrs)
+
+        score = random.uniform(score_low, score_high)
+        start = [node for node in self.G.nodes() if self.G.in_degree(node) == 0]
+        for node in start:
+            if random.random() > threshold:
+                step(node)
+
+
+obj = KG()
+obj.initializeScores()
+obj.showGraph()

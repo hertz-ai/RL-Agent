@@ -234,7 +234,7 @@ class Game(AbstractGame):
 
 class Student:
     def __init__(self):
-        self.n_concepts = 50
+        self.n_concepts = 40
         # the knowledge and application scores should be given from the graph based on moving inwards from the leaves
         self.state = {'knowledge': [], 'application': []}
         self.knowledge_graph = []

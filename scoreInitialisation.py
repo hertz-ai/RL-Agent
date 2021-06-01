@@ -13,8 +13,8 @@ def step(node):
     global threshold, score
     k = round(score + random.gauss(0, score / 10), 2)
     a = round(random.uniform(0, k), 2)
-    G.nodes[node]['knowledge score'] = k
-    G.nodes[node]['application score'] = a
+    G.nodes[node]['knowledge score'] = max(k, 0)
+    G.nodes[node]['application score'] = max(a, 0)
     threshold += 0.05
     score -= random.uniform(0.01, min(0.3, score))
     if score > 0 and threshold < 1:
