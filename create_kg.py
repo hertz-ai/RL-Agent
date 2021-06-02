@@ -15,11 +15,6 @@ class KG:
         self.page_name = 'Chemistry'
         self.G = nx.DiGraph()
 
-        self.makeGraph()
-        self.pruneGraph()
-
-        self.adjacencyMatrix = nx.linalg.graphmatrix.adjacency_matrix(self.G).A
-
     def makeGraph(self):
         def valid1(x):
             return ':' not in x and 'List' not in x and 'disambiguation' not in x
@@ -60,6 +55,9 @@ class KG:
             to_remove.append((bottom, top))
         nxcf.set_edge_attributes(self.G, edge_attrs)
         self.G.remove_edges_from(to_remove)
+
+    def makeAdjacencyMatrix(self):
+        self.adjMatrix = nx.linalg.graphmatrix.adjacency_matrix(self.G).A
 
     def __repr__(self):
         table = Table(title='Nodes and their attributes')
@@ -135,7 +133,7 @@ class KG:
             if random.random() > threshold:
                 step(node)
 
-
-obj = KG()
-obj.initializeScores()
-obj.showGraph()
+    def resetScores(self):
+        for node in self.G.nodes():
+            self.G.nodes[node]['knowledge score'] = 0
+            self.G.nodes[node]['application score'] = 0

@@ -35,7 +35,7 @@ for i in range(10):
     K = [round(random.random(), 2) for i in range(2)]
     for f in F:
         p = round(random.random(), 2)
-        W = [p, round(1-p, 2)]
+        W = [p, round(1 - p, 2)]
         D = [random.randint(1, 5), random.randint(1, 5)]
         K_ = [func1(K[j] + D[j] * W[j] * f / (10 * (K[j] + epsilon)))
               if f != 0 else K[j] for j in range(2)]

@@ -14,7 +14,7 @@ class AbstractGame(ABC):
     def step(self, action):
         """
         Apply action to the game.
-        
+
         Args:
             action : action of the action_space to take.
 
@@ -28,7 +28,7 @@ class AbstractGame(ABC):
         Return the current player.
 
         Returns:
-            The current player, it should be an element of the players list in the config. 
+            The current player, it should be an element of the players list in the config.
         """
         return 0
 
@@ -37,7 +37,7 @@ class AbstractGame(ABC):
         """
         Should return the legal actions at each turn, if it is not available, it can return
         the whole action space. At each turn, the game have to be able to handle one of returned actions.
-        
+
         For complex game where calculating legal moves is too long, the idea is to define the legal actions
         equal to the action space but to return a negative reward if the action is illegal.
 
@@ -50,7 +50,7 @@ class AbstractGame(ABC):
     def reset(self):
         """
         Reset the game for a new game.
-        
+
         Returns:
             Initial observation of the game.
         """

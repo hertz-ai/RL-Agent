@@ -3,6 +3,8 @@ import os
 
 import numpy
 import torch
+from create_kg import KG
+import random
 
 from .abstract_game import AbstractGame
 
@@ -31,7 +33,7 @@ class MuZeroConfig:
         self.opponent = None  # ! I changed this
         # Hard coded agent that MuZero faces to assess his progress in multiplayer games. It doesn't influence training. None, "random" or "expert" if implemented in the Game class
 
-        ### Self-Play
+        """Self-Play"""
         # Number of simultaneous threads/workers self-playing to feed the replay buffer
         self.num_workers = 1
         self.selfplay_on_gpu = False
@@ -45,16 +47,16 @@ class MuZeroConfig:
         self.root_dirichlet_alpha = 0.3
         self.root_exploration_fraction = 0.25
 
-        # UCB formula
+        """UCB formula"""
         self.pb_c_base = 19652
         self.pb_c_init = 1.25
 
-        ### Network
+        """Network"""
         self.network = "resnet"  # "resnet" / "fullyconnected"
         # Value and reward are scaled (with almost sqrt) and encoded on a vector with a range of -support_size to support_size. Choose it so that support_size <= sqrt(max(abs(discounted reward)))
         self.support_size = 10
 
-        # Residual Network
+        """Residual Network"""
         # Downsample observations before representation network, False / "CNN" (lighter) / "resnet" (See paper appendix Network Architecture)
         self.downsample = False
         self.blocks = 3  # Number of blocks in the ResNet
@@ -69,7 +71,7 @@ class MuZeroConfig:
         # Define the hidden layers in the policy head of the prediction network
         self.resnet_fc_policy_layers = [64]
 
-        # Fully Connected Network
+        """Fully Connected Network"""
         self.encoding_size = 32
         # Define the hidden layers in the representation network
         self.fc_representation_layers = []
@@ -80,7 +82,7 @@ class MuZeroConfig:
         self.fc_value_layers = []  # Define the hidden layers in the value network
         self.fc_policy_layers = []  # Define the hidden layers in the policy network
 
-        # Training
+        """Training"""
         self.results_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../results", os.path.basename(__file__)[
                                          :-3], datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))  # Path to store the model weights and TensorBoard logs
         self.save_model = True  # Save the checkpoint in results_path as model.checkpoint
@@ -102,7 +104,7 @@ class MuZeroConfig:
         self.lr_decay_rate = 1  # Set it to 1 to use a constant learning rate
         self.lr_decay_steps = 10000
 
-        ### Replay Buffer
+        """ Replay Buffer """
         # Number of self-play games to keep in the replay buffer
         self.replay_buffer_size = 10000
         self.num_unroll_steps = 42  # Number of game moves to keep for every batch element
@@ -143,6 +145,7 @@ class Game(AbstractGame):
         self.env = Student()
 
     def step(self, action):
+        # * Compulsory
         """
         Apply action to the game.
 
@@ -155,16 +158,18 @@ class Game(AbstractGame):
         observation, reward, done = self.env.step(action)
         return observation, reward * 10, done
 
-    def to_play(self):
-        """
-        Return the current player.
+    # def to_play(self):
+    #     """
+    #     Return the current player.
 
-        Returns:
-            The current player, it should be an element of the players list in the config.
-        """
-        return self.env.to_play()
+    #     Returns:
+    #     # ! don't need it
+    #         The current player, it should be an element of the players list in the config.
+    #     """
+    #     return self.env.to_play()
 
     def legal_actions(self):
+        # * Compulsory
         """
         Should return the legal actions at each turn, if it is not available, it can return
         the whole action space. At each turn, the game have to be able to handle one of returned actions.
@@ -178,6 +183,7 @@ class Game(AbstractGame):
         return self.env.legal_actions()
 
     def reset(self):
+        # * Compulsory
         """
         Reset the game for a new game.
 
@@ -187,39 +193,40 @@ class Game(AbstractGame):
         return self.env.reset()
 
     def render(self):
+        # * Compulsory
         """
         Display the game observation.
         """
         self.env.render()
         input("Press enter to take a step ")
 
-    def human_to_action(self):
-        """
-        For multiplayer games, ask the user for a legal action
-        and return the corresponding action number.
+    # def human_to_action(self):
+    #     """
+    #     For multiplayer games, ask the user for a legal action
+    #     and return the corresponding action number.
 
-        Returns:
-            An integer from the action space.
-        """
-        # ! dont need it
-        choice = input(
-            f"Enter the column to play for the player {self.to_play()}: ")
-        while choice not in [str(action) for action in self.legal_actions()]:
-            choice = input("Enter another column : ")
-        return int(choice)
+    #     Returns:
+    #         An integer from the action space.
+    #     """
+    #     # ! dont need it
+    #     choice = input(
+    #         f"Enter the column to play for the player {self.to_play()}: ")
+    #     while choice not in [str(action) for action in self.legal_actions()]:
+    #         choice = input("Enter another column : ")
+    #     return int(choice)
 
-    def expert_agent(self):
-        """
-        Hard coded agent that MuZero faces to assess his progress in multiplayer games.
-        It doesn't influence training
+    # def expert_agent(self):
+    #     """
+    #     Hard coded agent that MuZero faces to assess his progress in multiplayer games.
+    #     It doesn't influence training
 
-        Returns:
-            Action as an integer to take in the current game state
-        """
-        # ! dont need it
-        return self.env.expert_action()
+    #     Returns:
+    #         Action as an integer to take in the current game state
+    #     """
+    #     # ! dont need it
+    #     return self.env.expert_action()
 
-    def action_to_string(self, action_number):
+    def action_to_string(self, action_vector):
         """
         Convert an action number to a string representing the action.
 
@@ -229,32 +236,76 @@ class Game(AbstractGame):
         Returns:
             String representing the action.
         """
-        return f"Play column {action_number + 1}"
+        response = str(self.env.node_sequence) + '\n' + str(action_vector)
+        return response
 
 
 class Student:
-    def __init__(self):
-        self.n_concepts = 40
-        # the knowledge and application scores should be given from the graph based on moving inwards from the leaves
-        self.state = {'knowledge': [], 'application': []}
-        self.knowledge_graph = []
+    @staticmethod
+    def randomlyIncreased(score: float) -> float:
+        return score + random.triangular(0, 1 - score, 0.01 * (1 - score))
 
-    def to_play(self):
-        return 0 if self.player == 1 else 1
+    def __init__(self):
+        self.KG = KG()
+        self.KG.makeGraph()
+        self.KG.pruneGraph()
+        self.KG.makeAdjacencyMatrix()
+        self.KG.initializeScores()
+
+        self.n_concepts = self.KG.n_nodes
+        self.node_sequence = self.KG.G.nodes()
+        self.state = {'knowledge': [node['knowledge score'] for node in self.KG.G.nodes()],
+                      'application': [node['application score'] for node in self.KG.G.nodes()]}
+        self.knowledge_graph = self.KG.adjMatrix
+        self.goal_state = {'knowledge': [self.randomlyIncreased(node['knowledge score']) for node in self.KG.G.nodes()],
+                           'application': [self.randomlyIncreased(node['application score']) for node in self.KG.G.nodes()]}
+
+    # def to_play(self):
+    #     # ! commented in Game class too
+    #     return 0 if self.player == 1 else 1
 
     def reset(self):
-        self.board = numpy.zeros((6, 7), dtype="int32")
-        self.player = 1
-        return self.get_observation()
+        self.KG.resetScores()
+        self.KG.initializeScores()
+        self.n_concepts = self.KG.n_nodes
+        self.node_sequence = self.KG.G.nodes()
+        self.state = {'knowledge': [node['knowledge score'] for node in self.KG.G.nodes()],
+                      'application': [node['application score'] for node in self.KG.G.nodes()]}
+        self.goal_state = {'knowledge': [self.randomlyIncreased(node['knowledge score']) for node in self.KG.G.nodes()],
+                           'application': [self.randomlyIncreased(node['application score']) for node in self.KG.G.nodes()]}
+        self.knowledge_graph = self.KG.adjMatrix
 
     def step(self, action):
+        def get_materials(action):
+            # ! dummy function
+            return [0]
+
+        def generate_questions(material):
+            # ! dummy function
+            return [0]
+
+        def get_answers(question, material):
+            # ! dummy function
+            return question + material
+
+        def get_scores(question, answer):
+            # ! dummy function
+            return question + answer
         """
-        our action is a text embedding
+        our action is a weighted vector of length self.n_concepts
         reward is the formula and the score in the test
         done is if the goal is reached
         - or the user is within some threshold of the goal
         """
 
+        materials = get_materials(action)
+        questions = [generate_questions(material) for material in materials]
+        # format is incorrect for the below question
+        answers = [get_answers(question, material) for question, material in zip(questions, materials)]
+        scores = [get_scores(question, answer) for question, answer in zip(questions, answers)]
+
+        reward = 0
+        done = 0
         return self.get_observation(), reward, done
 
     def get_observation(self):
