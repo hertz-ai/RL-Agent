@@ -243,6 +243,15 @@ class Game(AbstractGame):
 class Student:
     @staticmethod
     def randomlyIncreased(score: float) -> float:
+        """
+        increases the score by a small random amount. the increase is inversely proportional to the original score.
+
+        Args:
+            score (float): the original score
+
+        Returns:
+            float: the original score increased by a small amount.
+        """
         return score + random.triangular(0, 1 - score, 0.01 * (1 - score))
 
     def __init__(self):
@@ -265,6 +274,9 @@ class Student:
     #     return 0 if self.player == 1 else 1
 
     def reset(self):
+        """
+        for next / new student. 
+        """
         self.KG.resetScores()
         self.KG.initializeScores()
         self.n_concepts = self.KG.n_nodes
