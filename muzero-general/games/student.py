@@ -5,6 +5,8 @@ import numpy
 import torch
 from create_kg import KG
 import random
+import json
+import requests
 
 from .abstract_game import AbstractGame
 
@@ -83,12 +85,20 @@ class MuZeroConfig:
         self.fc_policy_layers = []  # Define the hidden layers in the policy network
 
         """Training"""
-        self.results_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../results", os.path.basename(__file__)[
-                                         :-3], datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))  # Path to store the model weights and TensorBoard logs
-        self.save_model = True  # Save the checkpoint in results_path as model.checkpoint
+        self.results_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../results",
+            os.path.basename(__file__)[:-3],
+            datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S"),
+        )  # Path to store the model weights and TensorBoard logs
+        self.save_model = (
+            True  # Save the checkpoint in results_path as model.checkpoint
+        )
         # Total number of training steps (ie weights update according to a batch)
         self.training_steps = 100000
-        self.batch_size = 64  # Number of parts of games to train on at each training step
+        self.batch_size = (
+            64  # Number of parts of games to train on at each training step
+        )
         # Number of training steps before using the model for self-playing
         self.checkpoint_interval = 10
         # Scale the value loss to avoid overfitting of the value function, paper recommends 0.25 (See paper appendix Reanalyze)
@@ -107,7 +117,9 @@ class MuZeroConfig:
         """ Replay Buffer """
         # Number of self-play games to keep in the replay buffer
         self.replay_buffer_size = 10000
-        self.num_unroll_steps = 42  # Number of game moves to keep for every batch element
+        self.num_unroll_steps = (
+            42  # Number of game moves to keep for every batch element
+        )
         # Number of steps in the future to take into account for calculating the target value
         self.td_steps = 42
         # Prioritized Replay (See paper appendix Training), select in priority the elements in the replay buffer which are unexpected for the network
@@ -236,7 +248,7 @@ class Game(AbstractGame):
         Returns:
             String representing the action.
         """
-        response = str(self.env.node_sequence) + '\n' + str(action_vector)
+        response = str(self.env.node_sequence) + "\n" + str(action_vector)
         return response
 
 
@@ -263,11 +275,21 @@ class Student:
 
         self.n_concepts = self.KG.n_nodes
         self.node_sequence = self.KG.G.nodes()
-        self.state = {'knowledge': [node['knowledge score'] for node in self.KG.G.nodes()],
-                      'application': [node['application score'] for node in self.KG.G.nodes()]}
+        self.state = {
+            "knowledge": [node["knowledge score"] for node in self.KG.G.nodes()],
+            "application": [node["application score"] for node in self.KG.G.nodes()],
+        }
         self.knowledge_graph = self.KG.adjMatrix
-        self.goal_state = {'knowledge': [self.randomlyIncreased(node['knowledge score']) for node in self.KG.G.nodes()],
-                           'application': [self.randomlyIncreased(node['application score']) for node in self.KG.G.nodes()]}
+        self.goal_state = {
+            "knowledge": [
+                self.randomlyIncreased(node["knowledge score"])
+                for node in self.KG.G.nodes()
+            ],
+            "application": [
+                self.randomlyIncreased(node["application score"])
+                for node in self.KG.G.nodes()
+            ],
+        }
 
     # def to_play(self):
     #     # ! commented in Game class too
@@ -275,16 +297,26 @@ class Student:
 
     def reset(self):
         """
-        for next / new student. 
+        for next / new student.
         """
         self.KG.resetScores()
         self.KG.initializeScores()
         self.n_concepts = self.KG.n_nodes
         self.node_sequence = self.KG.G.nodes()
-        self.state = {'knowledge': [node['knowledge score'] for node in self.KG.G.nodes()],
-                      'application': [node['application score'] for node in self.KG.G.nodes()]}
-        self.goal_state = {'knowledge': [self.randomlyIncreased(node['knowledge score']) for node in self.KG.G.nodes()],
-                           'application': [self.randomlyIncreased(node['application score']) for node in self.KG.G.nodes()]}
+        self.state = {
+            "knowledge": [node["knowledge score"] for node in self.KG.G.nodes()],
+            "application": [node["application score"] for node in self.KG.G.nodes()],
+        }
+        self.goal_state = {
+            "knowledge": [
+                self.randomlyIncreased(node["knowledge score"])
+                for node in self.KG.G.nodes()
+            ],
+            "application": [
+                self.randomlyIncreased(node["application score"])
+                for node in self.KG.G.nodes()
+            ],
+        }
         self.knowledge_graph = self.KG.adjMatrix
 
     def step(self, action):
@@ -293,7 +325,22 @@ class Student:
             return [0]
 
         def generate_questions(material):
-            # ! dummy function
+            body = {
+                "text_corpus": material,
+                "assessment": {
+                    "name": "".join(
+                        [
+                            random.choice(string.ascii_letters)
+                            for _ in random.randint(1, 15)
+                        ]
+                    ),
+                    "course_id": 21,
+                    "number_of_questions": 1,
+                    "assessment_type": "MCQ",
+                    "is_active": True,
+                },
+            }
+            response = requests.post("", data=json.dumps(body), headers={'Content-Type': 'application/json'})
             return [0]
 
         def get_answers(question, material):
@@ -303,6 +350,7 @@ class Student:
         def get_scores(question, answer):
             # ! dummy function
             return question + answer
+
         """
         our action is a weighted vector of length self.n_concepts
         reward is the formula and the score in the test
@@ -313,8 +361,13 @@ class Student:
         materials = get_materials(action)
         questions = [generate_questions(material) for material in materials]
         # format is incorrect for the below question
-        answers = [get_answers(question, material) for question, material in zip(questions, materials)]
-        scores = [get_scores(question, answer) for question, answer in zip(questions, answers)]
+        answers = [
+            get_answers(question, material)
+            for question, material in zip(questions, materials)
+        ]
+        scores = [
+            get_scores(question, answer) for question, answer in zip(questions, answers)
+        ]
 
         reward = 0
         done = 0
@@ -385,7 +438,7 @@ class Student:
         action = numpy.random.choice(self.legal_actions())
         for k in range(3):
             for l in range(4):
-                sub_board = board[k: k + 4, l: l + 4]
+                sub_board = board[k : k + 4, l : l + 4]
                 # Horizontal and vertical checks
                 for i in range(4):
                     if abs(sum(sub_board[i, :])) == 3:
